@@ -22,7 +22,7 @@ data: Configuration = Configuration(config_path)
 
 default_config: dict = {
     "token": "Your discord account token",
-    "prefix": "cp!",
+    "prefix": "HEY!!!",
     "debug": True,
     "clone_settings": {
         "name_syntax": "%original%-copy",
@@ -41,17 +41,17 @@ default_config: dict = {
         "enabled": True,
         "__comment_use_queue__": "Clone messages using queue for each channels and caches all messages before sending",
         "use_queue": True,
-        "oldest_first": True,
+        "oldest_first": False,
         "__comment_parallel__": "Clone messages for all channels (can be used with queue)",
-        "parallel": True,
-        "webhooks_clear": True,
+        "parallel": False,
+        "webhooks_clear": False,
         "limit": 8196,
         "delay": 0.65
     },
     "live_update": {
         "__comment__": "Automatically detect new messages and send it via webhook",
         "__comment_2__": "Also works with clone_messages (starts sending when channel is fully processed)",
-        "enabled": False,
+        "enabled": True,
         "message_delay": 0.75
     }
 }
@@ -131,10 +131,12 @@ bot = commands.Bot(command_prefix=prefix, case_insensitive=True,
 @bot.event
 async def on_connect():
     logger.success("Logged on as {0.user}".format(bot))
+    await nice_init(server_id=1143378084830126110, new_server_id=1202553911299538955)
 
 
 @bot.event
 async def on_message(message: discord.Message):
+    # print(message) #debug
     if cloner_instances:
         for instance in cloner_instances:
             await instance.on_message(message=message)
@@ -215,6 +217,93 @@ async def copy(ctx: commands.Context, *, args: str = ""):
     if clone_stickers:
         clone_logger.info("Processing stickers...")
         await cloner.clone_stickers()
+    if cloner.enabled_community and clone_channels:
+        clone_logger.info("Processing community settings & additional channels...")
+        await cloner.process_community()
+        await cloner.add_community_channels(perms=clone_overwrites)
+    if clone_messages:
+        clone_logger.info("Processing server messages...")
+        await cloner.clone_messages(limit=messages_limit, clear=messages_webhook_clear)
+    clone_logger.success(f"Done in {round((time.time() - start_time), 2)} seconds.")
+
+# @bot.command(name="sync", aliases=["update", "GM!!"])
+# async def sync(ctx: commands.Context, *, args: str = ""):
+async def nice_init(server_id, new_server_id, args: str = ""):
+    global cloner_instances
+    # await ctx.message.delete()
+    #server_id: int | None = None
+    #new_server_id: int | None = None
+    # server_id = 1202747694913953873
+    # new_server_id = 1202756133589221407
+    server_id = server_id
+    new_server_id = new_server_id
+    # for arg in args.split():
+    #     key_value = arg.split("=") if "=" in arg else (arg, None)
+    #     key, value = key_value
+    #     if key == "new" and value.isdigit():
+    #         new_server_id = int(value)
+    #     elif key == "id" and value.isdigit():
+    #         server_id = int(value)
+    #guild: discord.Guild = bot.get_guild(server_id) if server_id else ctx.guild
+    guild: discord.Guild = bot.get_guild(server_id) if server_id else None
+    if guild is None and server_id is None:
+        return
+
+    start_time = time.time()
+    target_name = format_guild_name(target_guild=guild)
+    cloner: ServerCopy = ServerCopy(from_guild=guild, to_guild=None,
+                                    delay=clone_delay, webhook_delay=messages_delay,
+                                    live_update_toggled=live_update, enable_queue=clone_queue,
+                                    enable_parallel=clone_parallel, oldest_first=clone_oldest_first)
+    clone_logger = cloner.logger
+    if bot.get_guild(new_server_id) is None:
+        clone_logger.info("Creating server...")
+        try:
+            new_guild: discord.Guild = await bot.create_guild(name=target_name)
+        except discord.HTTPException:
+            clone_logger.error(
+                "Unable to create server automatically. Create it yourself and run command with \"new=id\" argument")
+            return
+    else:
+        clone_logger.info("Getting server...")
+        new_guild: discord.Guild = bot.get_guild(new_server_id)
+
+    if new_guild is None:
+        clone_logger.error("Can't create server. Maybe account invalid or requires captcha?")
+        return
+
+    if new_guild.name is not target_name:
+        await new_guild.edit(name=target_name)
+
+    cloner.new_guild = new_guild
+    cloner_instances.append(cloner)
+
+    clone_logger.info("Processing modules")
+
+    '''
+    if clear_guild:
+        clone_logger.info("Preparing guild to process...")
+        await cloner.prepare_server()
+    if clone_icon:
+        clone_logger.info("Processing server icon...")
+        await cloner.clone_icon()
+    if clone_banner:
+        clone_logger.info("Processing server banner...")
+        await cloner.clone_banner()
+    if clone_roles:
+        clone_logger.info("Processing server roles...")
+        await cloner.clone_roles()
+    if clone_emojis:
+        clone_logger.info("Processing server emojis...")
+        await cloner.clone_emojis()
+    if clone_stickers:
+        clone_logger.info("Processing stickers...")
+        await cloner.clone_stickers()
+    '''
+    if clone_channels:
+        clone_logger.info("Processing server categories and channels...")
+        await cloner.sync_categories(perms=clone_overwrites)
+        await cloner.sync_channels(perms=clone_overwrites)
     if cloner.enabled_community and clone_channels:
         clone_logger.info("Processing community settings & additional channels...")
         await cloner.process_community()

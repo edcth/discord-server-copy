@@ -1,0 +1,35 @@
+{
+  "token": "MTE0NzQ2NDg2NzY5MTg5Njk2Mw.Gtzb0-.XIGWe1Cijy9vy26Ny_sMxxubyxHO8P4zcnZg2k",
+  "prefix": "HEY!!!",
+  "debug": true,
+  "clone_settings": {
+    "name_syntax": "%original%-copy",
+    "clone_delay": 1.337,
+    "clear_guild": true,
+    "icon": true,
+    "banner": true,
+    "roles": true,
+    "channels": true,
+    "overwrites": true,
+    "emoji": false,
+    "stickers": false
+  },
+  "clone_messages": {
+    "__comment__": "Clone messages in all channels (last messages). Long limit - long time need to copy",
+    "enabled": false,
+    "__comment_use_queue__": "Clone messages using queue for each channels and caches all messages before sending",
+    "use_queue": true,
+    "oldest_first": false,
+    "__comment_parallel__": "Clone messages for all channels (can be used with queue)",
+    "parallel": false,
+    "webhooks_clear": false,
+    "limit": 8196,
+    "delay": 0.65
+  },
+  "live_update": {
+    "__comment__": "Automatically detect new messages and send it via webhook",
+    "__comment_2__": "Also works with clone_messages (starts sending when channel is fully processed)",
+    "enabled": true,
+    "message_delay": 1.33
+  }
+}
